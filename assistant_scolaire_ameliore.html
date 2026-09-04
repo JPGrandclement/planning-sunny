@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="fr" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Assistant Scolaire - Trajet & Planning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        hawk: { 400: '#34d399', 500: '#10b981', 600: '#059669', 900: '#064e3b', 950: '#022c22' },
+                        ligne2: { 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 900: '#1e3a8a', 950: '#172554' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+        
+        .glass-header {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .switch-toggle {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .tab-pane {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-pane.active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .current-class-glow {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.5);
+        }
+
+        .home-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .home-card:hover {
+            transform: translateY(-4px);
+        }
+        .home-card:active {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="font-sans h-full flex flex-col antialiased selection:bg-hawk-500 selection:text-white relative">
+
+    <!-- Header -->
+    <header class="glass-header sticky top-0 z-40 px-4 py-3">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div>
+                <h1 class="text-lg font-extrabold text-white leading-tight tracking-tight">Mon Assistant</h1>
+                <p id="currentDateDisplay" class="text-xs font-medium text-slate-400 capitalize"></p>
+            </div>
+            
+            <!-- Time Simulator Button -->
+            <button onclick="toggleSimulator()" class="flex items-center gap-2 bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 hover:bg-slate-700 transition">
+                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span id="simTimeDisplay" class="text-xs font-mono font-bold text-slate-200">--:--</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto pb-24">
+        <div class="max-w-md mx-auto p-4">
+
+            <!-- TAB 0 : ACCUEIL -->
+            <div id="tab-home" class="tab-pane active">
+                <div class="space-y-4 py-4">
+                    <div class="text-center mb-6">
+                        <h2 class="text-2xl font-black text-white mb-2">Que veux-tu consulter ?</h2>
+                        <p class="text-sm text-slate-400">Choisis une section pour commencer</p>
+                    </div>
+
+                    <!-- Carte Bus -->
+                    <button onclick="switchTab('bus')" class="w-full home-card">
+                        <div class="bg-gradient-to-br from-hawk-900 to-hawk-950 border-2 border-hawk-600 rounded-3xl p-6 shadow-xl shadow-hawk-500/10">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-hawk-500/20 rounded-2xl">
+                                    <svg class="w-8 h-8 text-hawk-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                    </svg>
+                                </div>
+                                <svg class="w-6 h-6 text-hawk-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-black text-white mb-2">Horaires Bus</h3>
+                            <p class="text-sm text-hawk-300 mb-3">Consulte les horaires HAWK 3 et Ligne 2</p>
+                            <div id="homeNextBusPreview" class="text-xs text-hawk-400 font-semibold">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </button>
+
+                    <!-- Carte Planning -->
+                    <button onclick="switchTab('planning')" class="w-full home-card">
+                        <div class="bg-gradient-to-br from-slate-800 to-slate-900 border-2 border-slate-700 rounded-3xl p-6 shadow-xl">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="p-3 bg-slate-700/50 rounded-2xl">
+                                    <svg class="w-8 h-8 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-black text-white mb-2">Emploi du temps</h3>
+                            <p class="text-sm text-slate-400 mb-3">Ton planning de la semaine</p>
+                            <div id="homeNextClassPreview" class="text-xs text-slate-400 font-semibold">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1 : BUS & TRAJETS -->
+            <div id="tab-bus" class="tab-pane space-y-5">
+                
+                <!-- Line Selector Toggle -->
+                <div class="bg-slate-900 p-1.5 rounded-2xl border border-slate-800 flex relative shadow-inner">
+                    <div id="lineSlider" class="absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-hawk-600 rounded-xl switch-toggle shadow-md"></div>
+                    
+                    <button onclick="setLine('hawk3')" id="btn-hawk3" class="relative z-10 w-1/2 py-2.5 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-white">
+                        <span class="bg-white/20 px-1.5 py-0.5 rounded text-[10px] uppercase">Principal</span>
+                        HAWK 3
+                    </button>
+                    <button onclick="setLine('ligne2')" id="btn-ligne2" class="relative z-10 w-1/2 py-2.5 text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-slate-400">
+                        Ligne 2
+                        <span class="bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded text-[10px] border border-slate-700 uppercase" id="badge-ligne2">Altern.</span>
+                    </button>
+                </div>
+
+                <!-- Day Selector for Bus -->
+                <div class="flex gap-2 overflow-x-auto pb-2">
+                    <button onclick="setBusDay('today')" id="bus-day-today" class="bus-day-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all">
+                        Aujourd'hui
+                    </button>
+                    <button onclick="setBusDay('tomorrow')" id="bus-day-tomorrow" class="bus-day-btn px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all">
+                        Demain
+                    </button>
+                    <button onclick="setBusDay(1)" id="bus-day-1" class="bus-day-btn px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all">Lu</button>
+                    <button onclick="setBusDay(2)" id="bus-day-2" class="bus-day-btn px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all">Ma</button>
+                    <button onclick="setBusDay(3)" id="bus-day-3" class="bus-day-btn px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all">Me</button>
+                    <button onclick="setBusDay(4)" id="bus-day-4" class="bus-day-btn px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all">Je</button>
+                    <button onclick="setBusDay(5)" id="bus-day-5" class="bus-day-btn px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all">Ve</button>
+                </div>
+
+                <!-- Next Bus Widget -->
+                <div id="nextBusWidget" class="bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-3xl p-5 shadow-xl relative overflow-hidden">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+                <!-- Direction Toggle (Aller / Retour) -->
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <h3 class="text-sm font-bold text-slate-300">Horaires du jour</h3>
+                    <div class="flex bg-slate-900 rounded-lg p-0.5 border border-slate-800">
+                        <button onclick="setDirection('aller')" id="dir-aller" class="px-3 py-1 text-xs font-bold rounded-md bg-slate-700 text-white">Aller</button>
+                        <button onclick="setDirection('retour')" id="dir-retour" class="px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-white">Retour</button>
+                    </div>
+                </div>
+
+                <!-- Today's Trips List -->
+                <div id="busTimelineList" class="space-y-3">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+            </div>
+
+            <!-- TAB 2 : EMPLOI DU TEMPS -->
+            <div id="tab-planning" class="tab-pane space-y-4">
+                
+                <!-- Day Selector -->
+                <div class="flex justify-between gap-2 overflow-x-auto no-scrollbar pb-1">
+                    <button onclick="setPlanningDay(1)" id="day-1" class="day-btn flex-1 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-400 transition">Lu</button>
+                    <button onclick="setPlanningDay(2)" id="day-2" class="day-btn flex-1 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-400 transition">Ma</button>
+                    <button onclick="setPlanningDay(3)" id="day-3" class="day-btn flex-1 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-400 transition">Me</button>
+                    <button onclick="setPlanningDay(4)" id="day-4" class="day-btn flex-1 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-400 transition">Je</button>
+                    <button onclick="setPlanningDay(5)" id="day-5" class="day-btn flex-1 py-2 rounded-xl text-xs font-bold border border-slate-800 bg-slate-900 text-slate-400 transition">Ve</button>
+                </div>
+
+                <div class="flex justify-between items-center px-1">
+                    <h2 class="text-sm font-bold text-white">Emploi du temps</h2>
+                    <span id="planningDayLabel" class="text-xs text-hawk-400 font-medium">Lundi</span>
+                </div>
+
+                <!-- Schedule List -->
+                <div id="scheduleContainer" class="space-y-3 relative before:absolute before:inset-y-0 before:left-[43px] before:w-px before:bg-slate-800">
+                    <!-- Populated dynamically via JS -->
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 inset-x-0 bg-slate-900/95 backdrop-blur-lg border-t border-slate-800 pb-safe pt-2 px-6 z-40">
+        <div class="max-w-md mx-auto flex justify-around pb-4">
+            <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center gap-1 text-hawk-500 w-20 transition-colors">
+                <div class="p-1.5 rounded-full bg-hawk-500/10 mb-0.5">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                </div>
+                <span class="text-[10px] font-bold">Accueil</span>
+            </button>
+            <button onclick="switchTab('bus')" id="nav-bus" class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 w-20 transition-colors">
+                <div class="p-1.5 rounded-full mb-0.5">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+                </div>
+                <span class="text-[10px] font-bold">Bus</span>
+            </button>
+            <button onclick="switchTab('planning')" id="nav-planning" class="flex flex-col items-center gap-1 text-slate-500 hover:text-slate-300 w-20 transition-colors">
+                <div class="p-1.5 rounded-full mb-0.5">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                </div>
+                <span class="text-[10px] font-bold">Planning</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Simulator Modal -->
+    <div id="simulatorModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-sm p-5 shadow-2xl relative">
+            <h3 class="text-sm font-bold text-white mb-4">Simulateur de Temps</h3>
+            <p class="text-xs text-slate-400 mb-4">Modifie l'heure ou le jour pour tester le fonctionnement de l'assistant.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Heure de la journée</label>
+                    <input type="time" id="timeInput" class="w-full bg-slate-950 text-white font-mono border border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-hawk-500">
+                </div>
+                
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Forcer le jour</label>
+                    <select id="dayInput" class="w-full bg-slate-950 text-white text-sm border border-slate-700 rounded-xl px-3 py-2 focus:outline-none focus:border-hawk-500">
+                        <option value="1">Lundi</option>
+                        <option value="2">Mardi</option>
+                        <option value="3">Mercredi</option>
+                        <option value="4">Jeudi</option>
+                        <option value="5">Vendredi</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-6 flex gap-3">
+                <button onclick="toggleSimulator()" class="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 text-sm font-semibold hover:bg-slate-800">Annuler</button>
+                <button onclick="applySimulation()" class="flex-1 py-2.5 rounded-xl bg-hawk-600 text-white text-sm font-bold hover:bg-hawk-500 shadow-lg shadow-hawk-500/20">Appliquer</button>
+            </div>
+            
+            <button onclick="resetSimulation()" class="w-full mt-3 py-2 text-xs text-slate-400 hover:text-white flex items-center justify-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+                Revenir au temps réel
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA: EMPLOI DU TEMPS ---
+        const PLANNING = {
+            1: [ // Lundi
+                { start: '08:15', end: '09:10', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
+                { start: '09:10', end: '10:05', subject: 'Français', room: 'Salle 105', color: 'rose' },
+                { start: '10:20', end: '11:15', subject: 'Histoire-Géo', room: 'Salle 112', color: 'amber' },
+                { start: '11:15', end: '12:10', subject: 'Anglais', room: 'Salle 204', color: 'purple' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
+                { start: '13:40', end: '14:35', subject: 'Physique-Chimie', room: 'Labo 1', color: 'emerald' },
+                { start: '14:35', end: '15:30', subject: 'SVT', room: 'Labo 2', color: 'emerald' },
+                { start: '15:45', end: '16:40', subject: 'EPS', room: 'Gymnase', color: 'orange' },
+            ],
+            2: [ // Mardi
+                { start: '08:15', end: '09:10', subject: 'Technologie', room: 'Salle 03', color: 'slate' },
+                { start: '09:10', end: '10:05', subject: 'Anglais', room: 'Salle 204', color: 'purple' },
+                { start: '10:20', end: '11:15', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
+                { start: '11:15', end: '12:10', subject: 'Espagnol', room: 'Salle 208', color: 'purple' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
+                { start: '13:40', end: '14:35', subject: 'Français', room: 'Salle 105', color: 'rose' },
+                { start: '14:35', end: '15:30', subject: 'Histoire-Géo', room: 'Salle 112', color: 'amber' },
+            ],
+            3: [ // Mercredi (Finit à midi)
+                { start: '08:15', end: '09:10', subject: 'Français', room: 'Salle 105', color: 'rose' },
+                { start: '09:10', end: '10:05', subject: 'Arts Plastiques', room: 'Salle 301', color: 'pink' },
+                { start: '10:20', end: '11:15', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
+                { start: '11:15', end: '12:10', subject: 'Éducation Musicale', room: 'Salle 302', color: 'indigo' },
+            ],
+            4: [ // Jeudi
+                { start: '08:15', end: '09:10', subject: 'SVT', room: 'Labo 2', color: 'emerald' },
+                { start: '09:10', end: '10:05', subject: 'Physique-Chimie', room: 'Labo 1', color: 'emerald' },
+                { start: '10:20', end: '11:15', subject: 'Français', room: 'Salle 105', color: 'rose' },
+                { start: '11:15', end: '12:10', subject: 'Anglais', room: 'Salle 204', color: 'purple' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
+                { start: '13:40', end: '14:35', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
+                { start: '14:35', end: '15:30', subject: 'Espagnol', room: 'Salle 208', color: 'purple' },
+            ],
+            5: [ // Vendredi
+                { start: '08:15', end: '10:05', subject: 'EPS (2h)', room: 'Stade', color: 'orange' },
+                { start: '10:20', end: '11:15', subject: 'Histoire-Géo', room: 'Salle 112', color: 'amber' },
+                { start: '11:15', end: '12:10', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
+                { start: '13:40', end: '14:35', subject: 'Technologie', room: 'Salle 03', color: 'slate' },
+                { start: '14:35', end: '15:30', subject: 'Français', room: 'Salle 105', color: 'rose' },
+            ]
+        };
+
+        // --- DATA: BUS ---
+        const BUS_DATA = {
+            hawk3: {
+                themeColor: 'hawk',
+                aller: {
+                    from: "Crachier", to: "Hawking",
+                    trips: [{ dep: '07:30', arr: '08:05', days: [1,2,3,4,5] }]
+                },
+                retour: {
+                    from: "Hawking", to: "Crachier",
+                    trips: [
+                        { dep: '12:25', arr: '12:55', days: [3], note: "Mercredi" },
+                        { dep: '17:10', arr: '17:40', days: [1,2,4,5], note: "Lu/Ma/Je/Ve" }
+                    ]
+                }
+            },
+            ligne2: {
+                themeColor: 'ligne2',
+                aller: {
+                    from: "Clairs Espaces", to: "Hawking",
+                    trips: [
+                        { dep: '06:13', arr: '06:25', days: [1,2,3,4,5] },
+                        { dep: '06:43', arr: '06:55', days: [1,2,3,4,5] },
+                        { dep: '07:15', arr: '07:29', days: [1,2,3,4,5] },
+                        { dep: '07:45', arr: '07:59', days: [1,2,3,4,5], highlight: "8h" },
+                        { dep: '08:20', arr: '08:34', days: [1,2,3,4,5] },
+                        { dep: '08:45', arr: '08:57', days: [1,2,3,4,5] }
+                    ]
+                },
+                retour: {
+                    from: "Hawking", to: "Clairs Espaces",
+                    trips: [
+                        { dep: '12:10', arr: '12:24', days: [3] },
+                        { dep: '12:40', arr: '12:54', days: [3] },
+                        { dep: '15:40', arr: '15:54', days: [1,2,4,5] },
+                        { dep: '16:10', arr: '16:24', days: [1,2,4,5] },
+                        { dep: '16:40', arr: '16:54', days: [1,2,4,5] },
+                        { dep: '17:10', arr: '17:24', days: [1,2,4,5] },
+                        { dep: '17:40', arr: '17:54', days: [1,2,4,5] }
+                    ]
+                }
+            }
+        };
+
+        const DAYS_NAME = ['', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+
+        // STATE
+        let STATE = {
+            activeTab: 'home',
+            activeLine: 'hawk3',
+            activeDir: 'aller',
+            selectedBusDay: null, // null = auto, 'today', 'tomorrow', or 1-5
+            selectedPlanningDay: null,
+            simulatedDay: null,
+            simulatedTime: null,
+            realDate: new Date()
+        };
+
+        // INIT
+        window.onload = function() {
+            parseURLParams();
+            initTime();
+            updateUI();
+            
+            setInterval(() => {
+                if (!STATE.simulatedTime) {
+                    STATE.realDate = new Date();
+                    updateUI();
+                }
+            }, 60000);
+        };
+
+        // Parse URL parameters for deep linking
+        function parseURLParams() {
+            const params = new URLSearchParams(window.location.search);
+            const view = params.get('view');
+            const day = params.get('day');
+            
+            if (view === 'bus' || view === 'planning') {
+                STATE.activeTab = view;
+            }
+            if (day) {
+                const dayNum = parseInt(day);
+                if (dayNum >= 1 && dayNum <= 5) {
+                    if (view === 'bus') {
+                        STATE.selectedBusDay = dayNum;
+                    } else if (view === 'planning') {
+                        STATE.selectedPlanningDay = dayNum;
+                    }
+                }
+            }
+        }
+
+        function initTime() {
+            const now = STATE.realDate;
+            let day = now.getDay();
+            if (day === 0 || day === 6) day = 1;
+            
+            STATE.simulatedDay = day;
+            
+            const hours = now.getHours();
+            if (hours >= 12 && hours < 20) {
+                STATE.activeDir = 'retour';
+            } else {
+                STATE.activeDir = 'aller';
+            }
+        }
+
+        function getCurrentDay() { return STATE.simulatedDay || 1; }
+        function getCurrentTime() {
+            if (STATE.simulatedTime) return STATE.simulatedTime;
+            const now = STATE.realDate;
+            return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        }
+        function timeToMins(timeStr) {
+            const [h, m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function getNextWeekday(day) {
+            if (day === 5) return 1; // Vendredi -> Lundi
+            return day + 1;
+        }
+
+        // Get the day to display for bus schedules
+        function getBusDisplayDay() {
+            if (STATE.selectedBusDay === 'today') return getCurrentDay();
+            if (STATE.selectedBusDay === 'tomorrow') return getNextWeekday(getCurrentDay());
+            if (STATE.selectedBusDay >= 1 && STATE.selectedBusDay <= 5) return STATE.selectedBusDay;
+            
+            // Auto mode: check if we should suggest tomorrow
+            const currentDay = getCurrentDay();
+            const currentTime = getCurrentTime();
+            const currentMins = timeToMins(currentTime);
+            
+            // After 17:00, check if there are more buses today
+            if (currentMins > 1020) { // 17h = 1020 minutes
+                const lineData = BUS_DATA[STATE.activeLine];
+                const dirData = lineData[STATE.activeDir];
+                const todayTrips = dirData.trips.filter(t => t.days.includes(currentDay));
+                const hasMoreTrips = todayTrips.some(t => timeToMins(t.dep) > currentMins);
+                
+                if (!hasMoreTrips) {
+                    return getNextWeekday(currentDay);
+                }
+            }
+            
+            return currentDay;
+        }
+
+        function getPlanningDisplayDay() {
+            if (STATE.selectedPlanningDay) return STATE.selectedPlanningDay;
+            return getCurrentDay();
+        }
+
+        // UI ACTIONS
+        function switchTab(tabId) {
+            STATE.activeTab = tabId;
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            // Bottom Nav styling
+            ['home', 'bus', 'planning'].forEach(tab => {
+                const btn = document.getElementById(`nav-${tab}`);
+                if (tab === tabId) {
+                    btn.classList.replace('text-slate-500', 'text-hawk-500');
+                    btn.querySelector('div').classList.add('bg-hawk-500/10');
+                } else {
+                    btn.classList.replace('text-hawk-500', 'text-slate-500');
+                    btn.querySelector('div').classList.remove('bg-hawk-500/10');
+                }
+            });
+
+            updateUI();
+        }
+
+        function setLine(lineId) {
+            STATE.activeLine = lineId;
+            const slider = document.getElementById('lineSlider');
+            const btnHawk = document.getElementById('btn-hawk3');
+            const btnL2 = document.getElementById('btn-ligne2');
+            const badgeL2 = document.getElementById('badge-ligne2');
+
+            if (lineId === 'hawk3') {
+                slider.className = 'absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-xl switch-toggle shadow-md bg-hawk-600 translate-x-0';
+                btnHawk.classList.replace('text-slate-400', 'text-white');
+                btnL2.classList.replace('text-white', 'text-slate-400');
+                badgeL2.classList.replace('text-white', 'text-slate-400');
+                badgeL2.classList.replace('bg-ligne2-600', 'bg-slate-800');
+                badgeL2.classList.add('border-slate-700');
+            } else {
+                slider.className = 'absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] rounded-xl switch-toggle shadow-md bg-ligne2-600 translate-x-[calc(100%+4px)]';
+                btnL2.classList.replace('text-slate-400', 'text-white');
+                btnHawk.classList.replace('text-white', 'text-slate-400');
+                badgeL2.classList.replace('text-slate-400', 'text-white');
+                badgeL2.classList.replace('bg-slate-800', 'bg-ligne2-600');
+                badgeL2.classList.remove('border-slate-700');
+            }
+            updateUI();
+        }
+
+        function setDirection(dir) {
+            STATE.activeDir = dir;
+            const btnAller = document.getElementById('dir-aller');
+            const btnRetour = document.getElementById('dir-retour');
+            
+            if (dir === 'aller') {
+                btnAller.className = 'px-3 py-1 text-xs font-bold rounded-md bg-slate-700 text-white';
+                btnRetour.className = 'px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-white transition';
+            } else {
+                btnRetour.className = 'px-3 py-1 text-xs font-bold rounded-md bg-slate-700 text-white';
+                btnAller.className = 'px-3 py-1 text-xs font-bold rounded-md text-slate-400 hover:text-white transition';
+            }
+            updateBusTab();
+        }
+
+        function setBusDay(dayValue) {
+            STATE.selectedBusDay = dayValue;
+            updateBusDayButtons();
+            updateBusTab();
+        }
+
+        function updateBusDayButtons() {
+            const displayDay = getBusDisplayDay();
+            const currentDay = getCurrentDay();
+            const tomorrowDay = getNextWeekday(currentDay);
+            
+            document.querySelectorAll('.bus-day-btn').forEach(btn => {
+                btn.classList.remove('bg-hawk-600', 'text-white', 'border-hawk-500');
+                btn.classList.add('bg-slate-800', 'text-slate-400', 'border-slate-700');
+            });
+
+            let activeBtn = null;
+            if (STATE.selectedBusDay === 'today') {
+                activeBtn = document.getElementById('bus-day-today');
+            } else if (STATE.selectedBusDay === 'tomorrow') {
+                activeBtn = document.getElementById('bus-day-tomorrow');
+            } else if (STATE.selectedBusDay >= 1 && STATE.selectedBusDay <= 5) {
+                activeBtn = document.getElementById(`bus-day-${STATE.selectedBusDay}`);
+            } else {
+                // Auto mode
+                if (displayDay === tomorrowDay && displayDay !== currentDay) {
+                    activeBtn = document.getElementById('bus-day-tomorrow');
+                } else {
+                    activeBtn = document.getElementById('bus-day-today');
+                }
+            }
+
+            if (activeBtn) {
+                activeBtn.classList.remove('bg-slate-800', 'text-slate-400', 'border-slate-700');
+                activeBtn.classList.add('bg-hawk-600', 'text-white', 'border-hawk-500');
+            }
+        }
+
+        function setPlanningDay(dayIndex) {
+            STATE.selectedPlanningDay = dayIndex;
+            updatePlanningTab();
+        }
+
+        // CORE UPDATE
+        function updateUI() {
+            const dateStr = STATE.realDate.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('currentDateDisplay').innerText = dateStr;
+            document.getElementById('simTimeDisplay').innerText = getCurrentTime();
+            document.getElementById('simTimeDisplay').classList.toggle('text-amber-400', STATE.simulatedTime !== null);
+
+            if (STATE.activeTab === 'home') {
+                updateHomeTab();
+            } else if (STATE.activeTab === 'bus') {
+                updateBusTab();
+            } else if (STATE.activeTab === 'planning') {
+                updatePlanningTab();
+            }
+        }
+
+        function updateHomeTab() {
+            // Update bus preview
+            const lineData = BUS_DATA[STATE.activeLine];
+            const dirData = lineData[STATE.activeDir];
+            const currentMins = timeToMins(getCurrentTime());
+            const currentDay = getCurrentDay();
+            const validTrips = dirData.trips.filter(t => t.days.includes(currentDay));
+            
+            let nextTrip = null;
+            for (let i = 0; i < validTrips.length; i++) {
+                if (timeToMins(validTrips[i].dep) >= currentMins) {
+                    nextTrip = validTrips[i];
+                    break;
+                }
+            }
+
+            const busPreview = document.getElementById('homeNextBusPreview');
+            if (nextTrip) {
+                const diff = timeToMins(nextTrip.dep) - currentMins;
+                const hrs = Math.floor(diff / 60);
+                const mins = diff % 60;
+                let timeText = '';
+                if (hrs > 0) timeText += `${hrs}h `;
+                timeText += `${mins}min`;
+                busPreview.innerHTML = `⏱️ Prochain bus dans ${timeText}`;
+            } else {
+                busPreview.innerHTML = `🌙 Plus de bus aujourd'hui`;
+            }
+
+            // Update planning preview
+            const schedule = PLANNING[currentDay] || [];
+            let nextClass = null;
+            for (let cls of schedule) {
+                if (timeToMins(cls.start) > currentMins && !cls.break) {
+                    nextClass = cls;
+                    break;
+                }
+            }
+
+            const planningPreview = document.getElementById('homeNextClassPreview');
+            if (nextClass) {
+                planningPreview.innerHTML = `📚 Prochain cours : ${nextClass.subject} à ${nextClass.start}`;
+            } else {
+                planningPreview.innerHTML = `✅ Plus de cours aujourd'hui`;
+            }
+        }
+
+        function updateBusTab() {
+            updateBusDayButtons();
+            
+            const lineData = BUS_DATA[STATE.activeLine];
+            const dirData = lineData[STATE.activeDir];
+            const currentMins = timeToMins(getCurrentTime());
+            const displayDay = getBusDisplayDay();
+            const themeColor = lineData.themeColor;
+
+            const validTrips = dirData.trips.filter(t => t.days.includes(displayDay));
+
+            let nextTrip = null;
+            let nextTripIndex = -1;
+            for (let i = 0; i < validTrips.length; i++) {
+                if (timeToMins(validTrips[i].dep) >= currentMins) {
+                    nextTrip = validTrips[i];
+                    nextTripIndex = i;
+                    break;
+                }
+            }
+
+            renderNextBusWidget(nextTrip, currentMins, dirData, themeColor, displayDay);
+            renderBusTimeline(validTrips, nextTripIndex, themeColor);
+        }
+
+        function renderNextBusWidget(trip, currentMins, dirData, theme, displayDay) {
+            const container = document.getElementById('nextBusWidget');
+            
+            const textTheme = theme === 'hawk' ? 'text-hawk-400' : 'text-ligne2-400';
+            const bgTheme = theme === 'hawk' ? 'bg-hawk-500' : 'bg-ligne2-500';
+            const borderTheme = theme === 'hawk' ? 'border-hawk-500/30' : 'border-ligne2-500/30';
+            const bgLightTheme = theme === 'hawk' ? 'bg-hawk-500/20' : 'bg-ligne2-500/20';
+
+            const currentDay = getCurrentDay();
+            const isTomorrow = displayDay !== currentDay;
+
+            if (!trip) {
+                container.innerHTML = `
+                    <div class="text-center py-4">
+                        <span class="text-3xl mb-2 block">🌙</span>
+                        <h4 class="text-white font-bold">Fin de service</h4>
+                        <p class="text-slate-400 text-xs mt-1">Aucun bus prévu ${isTomorrow ? 'demain' : 'pour le reste de la journée'} sur cette ligne.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const depMins = timeToMins(trip.dep);
+            const diff = isTomorrow ? (1440 - currentMins + depMins) : (depMins - currentMins);
+            const hrsLeft = Math.floor(diff / 60);
+            const minsLeft = diff % 60;
+            
+            let timeText = '';
+            if (hrsLeft > 0) timeText += `<span class="text-2xl">${hrsLeft}</span><span class="text-sm font-medium opacity-80">h </span>`;
+            timeText += `<span class="text-4xl">${minsLeft}</span><span class="text-base font-medium opacity-80">min</span>`;
+
+            let dayBadge = '';
+            if (isTomorrow) {
+                dayBadge = `<span class="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 mb-2 uppercase tracking-wider">Demain - ${DAYS_NAME[displayDay]}</span>`;
+            }
+
+            container.innerHTML = `
+                <div class="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+                    <svg class="w-24 h-24 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.5-13H11v6l5.2 3.2.8-1.3-4.5-2.7V7z"/></svg>
+                </div>
+
+                ${dayBadge}
+
+                <span class="inline-flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${bgLightTheme} ${textTheme} border ${borderTheme} mb-3 uppercase tracking-wider relative z-10">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${bgTheme} opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 ${bgTheme}"></span>
+                    </span>
+                    Prochain Départ
+                </span>
+
+                <div class="flex items-end justify-between relative z-10">
+                    <div>
+                        <div class="text-[11px] text-slate-400 font-semibold mb-0.5">Depuis ${dirData.from}</div>
+                        <div class="text-5xl font-black text-white tracking-tighter">${trip.dep}</div>
+                    </div>
+                    <div class="text-right pb-1 ${textTheme}">
+                        <div class="font-black leading-none">${timeText}</div>
+                    </div>
+                </div>
+                
+                <div class="mt-4 bg-slate-950/60 rounded-xl p-3 border border-slate-800 flex items-center justify-between backdrop-blur-md relative z-10">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full bg-slate-400"></div>
+                        <span class="text-xs text-slate-300">Arrivée à ${dirData.to}</span>
+                    </div>
+                    <span class="text-sm font-bold text-slate-200">${trip.arr}</span>
+                </div>
+            `;
+        }
+
+        function renderBusTimeline(trips, nextTripIndex, theme) {
+            const container = document.getElementById('busTimelineList');
+            container.innerHTML = '';
+            
+            const currentMins = timeToMins(getCurrentTime());
+            
+            if (trips.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-500 text-center py-4 border border-slate-800 border-dashed rounded-xl">Aucun trajet ce jour-ci.</p>`;
+                return;
+            }
+
+            const textTheme = theme === 'hawk' ? 'text-hawk-400' : 'text-ligne2-400';
+            const borderActiveTheme = theme === 'hawk' ? 'border-hawk-500/50' : 'border-ligne2-500/50';
+            const bgActiveTheme = theme === 'hawk' ? 'bg-hawk-900/20' : 'bg-ligne2-900/20';
+            const shadowTheme = theme === 'hawk' ? 'shadow-hawk-500/10' : 'shadow-ligne2-500/10';
+
+            trips.forEach((trip, idx) => {
+                const isNext = idx === nextTripIndex;
+                const isPast = timeToMins(trip.dep) < currentMins;
+                
+                const card = document.createElement('div');
+                card.className = `p-3.5 rounded-2xl border transition-all flex items-center justify-between ${
+                    isNext ? `${bgActiveTheme} ${borderActiveTheme} shadow-md ${shadowTheme}` :
+                    isPast ? 'bg-slate-900/30 border-slate-800/50 opacity-50' :
+                    'bg-slate-900 border-slate-800'
+                }`;
+
+                let extraHtml = '';
+                if (isNext) {
+                    extraHtml = `<span class="text-[9px] uppercase tracking-wider font-bold ${textTheme} border border-current px-1.5 py-0.5 rounded">Prochain</span>`;
+                } else if (trip.highlight) {
+                    extraHtml = `<span class="text-[9px] font-bold text-amber-500 border border-amber-500/30 px-1.5 py-0.5 rounded bg-amber-500/10">${trip.highlight}</span>`;
+                } else if (trip.note) {
+                    extraHtml = `<span class="text-[9px] text-slate-500">${trip.note}</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="text-center w-12">
+                            <span class="block text-lg font-black ${isNext ? textTheme : (isPast ? 'text-slate-500' : 'text-slate-200')}">${trip.dep}</span>
+                        </div>
+                        <div class="flex flex-col items-center justify-center">
+                            <div class="w-1.5 h-1.5 rounded-full ${isNext ? 'bg-slate-400' : 'bg-slate-700'}"></div>
+                            <div class="w-0.5 h-3 bg-slate-800 my-0.5"></div>
+                            <div class="w-1.5 h-1.5 rounded-full ${isNext ? 'bg-slate-400' : 'bg-slate-700'}"></div>
+                        </div>
+                        <div class="text-center w-12">
+                            <span class="block text-sm font-bold ${isNext ? 'text-slate-200' : (isPast ? 'text-slate-600' : 'text-slate-400')}">${trip.arr}</span>
+                        </div>
+                    </div>
+                    <div>${extraHtml}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function updatePlanningTab() {
+            const day = getPlanningDisplayDay();
+            const currentMins = timeToMins(getCurrentTime());
+            
+            document.querySelectorAll('.day-btn').forEach(btn => {
+                btn.classList.remove('bg-hawk-600', 'text-white', 'border-hawk-500');
+                btn.classList.add('bg-slate-900', 'text-slate-400', 'border-slate-800');
+            });
+            const activeDayBtn = document.getElementById(`day-${day}`);
+            if(activeDayBtn) {
+                activeDayBtn.classList.remove('bg-slate-900', 'text-slate-400', 'border-slate-800');
+                activeDayBtn.classList.add('bg-hawk-600', 'text-white', 'border-hawk-500');
+            }
+
+            document.getElementById('planningDayLabel').innerText = DAYS_NAME[day];
+
+            const schedule = PLANNING[day] || [];
+            const container = document.getElementById('scheduleContainer');
+            container.innerHTML = '';
+
+            if (schedule.length === 0) {
+                container.innerHTML = `<p class="text-sm text-slate-500 text-center py-10">Pas de cours ce jour.</p>`;
+                return;
+            }
+
+            schedule.forEach((cls) => {
+                const startMins = timeToMins(cls.start);
+                const endMins = timeToMins(cls.end);
+                
+                const isCurrent = currentMins >= startMins && currentMins < endMins && day === getCurrentDay();
+                const isPast = currentMins >= endMins && day === getCurrentDay();
+
+                const colorMap = {
+                    'blue': 'text-blue-400',
+                    'rose': 'text-rose-400',
+                    'amber': 'text-amber-400',
+                    'purple': 'text-purple-400',
+                    'emerald': 'text-emerald-400',
+                    'orange': 'text-orange-400',
+                    'pink': 'text-pink-400',
+                    'indigo': 'text-indigo-400',
+                    'slate': 'text-slate-400'
+                };
+                const classColor = colorMap[cls.color] || 'text-white';
+
+                const div = document.createElement('div');
+                div.className = `flex relative pl-14 py-1 transition-opacity ${isPast ? 'opacity-40' : 'opacity-100'}`;
+                
+                const dotClass = isCurrent ? 'bg-hawk-400 shadow-[0_0_10px_rgba(52,211,153,0.8)] border-slate-950 scale-125' : (isPast ? 'bg-slate-700 border-slate-950' : 'bg-slate-500 border-slate-950');
+                
+                let cardClass = `flex-1 p-3 rounded-2xl border transition-all ${cls.break ? 'bg-slate-900/50 border-slate-800/50 border-dashed' : 'bg-slate-900 border-slate-800'}`;
+                if (isCurrent) {
+                    cardClass += ' current-class-glow bg-slate-800/80';
+                }
+
+                div.innerHTML = `
+                    <div class="absolute left-0 top-3 w-10 text-right pr-2">
+                        <span class="block text-xs font-bold ${isCurrent ? 'text-hawk-400' : 'text-slate-300'}">${cls.start}</span>
+                        <span class="block text-[10px] text-slate-500">${cls.end}</span>
+                    </div>
+                    
+                    <div class="absolute left-[39px] top-4 w-2 h-2 rounded-full border-2 ${dotClass} z-10 transition-transform"></div>
+                    
+                    <div class="${cardClass}">
+                        <div class="flex justify-between items-start">
+                            <h4 class="text-sm font-bold ${cls.break ? 'text-slate-400' : classColor}">${cls.subject}</h4>
+                            ${isCurrent ? '<span class="text-[9px] uppercase tracking-wider font-bold bg-hawk-500/20 text-hawk-400 px-1.5 py-0.5 rounded">En cours</span>' : ''}
+                        </div>
+                        <div class="flex items-center gap-1 mt-1">
+                            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span class="text-xs text-slate-400 font-medium">${cls.room}</span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // SIMULATOR
+        function toggleSimulator() {
+            const modal = document.getElementById('simulatorModal');
+            if (modal.classList.contains('hidden')) {
+                document.getElementById('timeInput').value = getCurrentTime();
+                document.getElementById('dayInput').value = getCurrentDay();
+                modal.classList.remove('hidden');
+            } else {
+                modal.classList.add('hidden');
+            }
+        }
+
+        function applySimulation() {
+            const timeVal = document.getElementById('timeInput').value;
+            const dayVal = document.getElementById('dayInput').value;
+            
+            if (timeVal) STATE.simulatedTime = timeVal;
+            if (dayVal) STATE.simulatedDay = parseInt(dayVal);
+            
+            updateUI();
+            toggleSimulator();
+        }
+
+        function resetSimulation() {
+            STATE.simulatedTime = null;
+            STATE.realDate = new Date();
+            initTime();
+            updateUI();
+            toggleSimulator();
+        }
+
+    </script>
+</body>
+</html>
