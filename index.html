@@ -83,9 +83,36 @@
     <!-- Header -->
     <header class="glass-header sticky top-0 z-40 px-4 py-3">
         <div class="max-w-md mx-auto flex items-center justify-between">
-            <div>
+            <div class="flex-1">
                 <h1 class="text-lg font-extrabold text-white leading-tight tracking-tight">Mon Assistant</h1>
-                <p id="currentDateDisplay" class="text-xs font-medium text-slate-400 capitalize"></p>
+                <div class="flex items-center gap-2">
+                    <p id="currentDateDisplay" class="text-xs font-medium text-slate-400 capitalize"></p>
+                    
+                    <!-- Week Badge with Dropdown -->
+                    <div class="relative">
+                        <button onclick="toggleWeekMenu()" id="weekIndicator" class="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-hawk-500/20 text-hawk-400 border border-hawk-500/30 uppercase tracking-wider cursor-pointer hover:bg-hawk-500/30 transition">
+                            <span id="weekModeIcon">🔄</span>
+                            <span id="weekLabel">Semaine A</span>
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                        </button>
+                        
+                        <!-- Dropdown Menu -->
+                        <div id="weekMenu" class="hidden absolute top-full mt-1 right-0 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 min-w-[160px] overflow-hidden">
+                            <button onclick="setWeekMode('auto')" class="w-full px-3 py-2 text-left text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200">
+                                <span>🔄 Auto</span>
+                                <span id="autoCheck" class="text-hawk-400 font-bold"></span>
+                            </button>
+                            <button onclick="setWeekMode('forceA')" class="w-full px-3 py-2 text-left text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200">
+                                <span>📌 Forcer Semaine A</span>
+                                <span id="forceACheck" class="text-hawk-400 font-bold"></span>
+                            </button>
+                            <button onclick="setWeekMode('forceB')" class="w-full px-3 py-2 text-left text-xs hover:bg-slate-800 transition flex items-center justify-between text-slate-200">
+                                <span>📌 Forcer Semaine B</span>
+                                <span id="forceBCheck" class="text-hawk-400 font-bold"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Time Simulator Button -->
@@ -294,48 +321,56 @@
 
     <script>
         // --- DATA: EMPLOI DU TEMPS ---
+        // Date de référence pour la semaine A (première semaine de l'année scolaire 2026-2027)
+        // Ajustez cette date selon votre calendrier scolaire
+        const WEEK_A_REFERENCE = new Date('2026-09-01'); // 1er septembre 2026 = Semaine A
+        
         const PLANNING = {
             1: [ // Lundi
-                { start: '08:15', end: '09:10', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
-                { start: '09:10', end: '10:05', subject: 'Français', room: 'Salle 105', color: 'rose' },
-                { start: '10:20', end: '11:15', subject: 'Histoire-Géo', room: 'Salle 112', color: 'amber' },
-                { start: '11:15', end: '12:10', subject: 'Anglais', room: 'Salle 204', color: 'purple' },
-                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
-                { start: '13:40', end: '14:35', subject: 'Physique-Chimie', room: 'Labo 1', color: 'emerald' },
-                { start: '14:35', end: '15:30', subject: 'SVT', room: 'Labo 2', color: 'emerald' },
-                { start: '15:45', end: '16:40', subject: 'EPS', room: 'Gymnase', color: 'orange' },
+                { start: '08:15', end: '09:10', subject: 'Mathématiques', room: 'Salle 201', color: 'blue', teacher: 'CALVIER T.', week: 'both' },
+                { start: '09:10', end: '10:05', subject: 'Anglais', room: 'Salle 107', color: 'purple', teacher: 'BOISSET A.', week: 'both' },
+                { start: '10:20', end: '11:15', subject: 'Histoire-Géo', room: 'Salle 102', color: 'amber', teacher: 'QUARESIMIN L.', week: 'both' },
+                { start: '11:15', end: '12:10', subject: 'Anglais', room: 'Salle 107', color: 'purple', teacher: 'BOISSET A.', week: 'A' },
+                { start: '11:15', end: '12:10', subject: 'Vie de Classe', room: 'Salle 106', color: 'slate', teacher: 'MAURIN C.', week: 'B' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true, week: 'both' },
+                { start: '13:40', end: '14:35', subject: 'Arts Plastiques', room: 'Salle 212', color: 'pink', teacher: 'DREVETON R.', week: 'both' },
+                { start: '14:45', end: '15:40', subject: 'Mathématiques', room: 'Salle 200', color: 'blue', teacher: 'CALVIER T.', week: 'both' },
             ],
             2: [ // Mardi
-                { start: '08:15', end: '09:10', subject: 'Technologie', room: 'Salle 03', color: 'slate' },
-                { start: '09:10', end: '10:05', subject: 'Anglais', room: 'Salle 204', color: 'purple' },
-                { start: '10:20', end: '11:15', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
-                { start: '11:15', end: '12:10', subject: 'Espagnol', room: 'Salle 208', color: 'purple' },
-                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
-                { start: '13:40', end: '14:35', subject: 'Français', room: 'Salle 105', color: 'rose' },
-                { start: '14:35', end: '15:30', subject: 'Histoire-Géo', room: 'Salle 112', color: 'amber' },
+                { start: '08:15', end: '09:10', subject: 'Physique-Chimie', room: 'Salle 215', color: 'emerald', teacher: 'HIREL S.', week: 'both' },
+                { start: '09:10', end: '10:05', subject: 'Français', room: 'Salle 106', color: 'rose', teacher: 'MAURIN C.', week: 'both' },
+                { start: '10:20', end: '11:15', subject: 'EPS', room: 'Gymnase', color: 'orange', teacher: 'GONIN A.', week: 'both' },
+                { start: '11:15', end: '12:10', subject: 'EPS', room: 'Gymnase', color: 'orange', teacher: 'GONIN A.', week: 'both' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true, week: 'both' },
+                { start: '13:40', end: '14:35', subject: 'Français', room: 'Salle 106', color: 'rose', teacher: 'MAURIN C.', week: 'A' },
+                { start: '13:40', end: '14:35', subject: 'Devoirs Faits', room: 'Salle CDI', color: 'slate', teacher: 'GERARD M.', week: 'B' },
+                { start: '14:45', end: '15:40', subject: 'Anglais', room: 'Salle 107', color: 'purple', teacher: 'BOISSET A.', week: 'both' },
+                { start: '16:07', end: '17:02', subject: 'SVT', room: 'Salle 214', color: 'emerald', teacher: 'BRUN A.', week: 'A' },
             ],
             3: [ // Mercredi (Finit à midi)
-                { start: '08:15', end: '09:10', subject: 'Français', room: 'Salle 105', color: 'rose' },
-                { start: '09:10', end: '10:05', subject: 'Arts Plastiques', room: 'Salle 301', color: 'pink' },
-                { start: '10:20', end: '11:15', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
-                { start: '11:15', end: '12:10', subject: 'Éducation Musicale', room: 'Salle 302', color: 'indigo' },
+                { start: '08:15', end: '09:10', subject: 'Anglais', room: 'Salle 107', color: 'purple', teacher: 'BOISSET A.', week: 'both' },
+                { start: '09:10', end: '10:05', subject: 'Histoire-Géo', room: 'Salle 102', color: 'amber', teacher: 'QUARESIMIN L.', week: 'both' },
+                { start: '10:20', end: '11:15', subject: 'Mathématiques', room: 'Salle 200', color: 'blue', teacher: 'CALVIER T.', week: 'both' },
+                { start: '11:15', end: '12:10', subject: 'Français', room: 'Salle 106', color: 'rose', teacher: 'MAURIN C.', week: 'both' },
             ],
             4: [ // Jeudi
-                { start: '08:15', end: '09:10', subject: 'SVT', room: 'Labo 2', color: 'emerald' },
-                { start: '09:10', end: '10:05', subject: 'Physique-Chimie', room: 'Labo 1', color: 'emerald' },
-                { start: '10:20', end: '11:15', subject: 'Français', room: 'Salle 105', color: 'rose' },
-                { start: '11:15', end: '12:10', subject: 'Anglais', room: 'Salle 204', color: 'purple' },
-                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
-                { start: '13:40', end: '14:35', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
-                { start: '14:35', end: '15:30', subject: 'Espagnol', room: 'Salle 208', color: 'purple' },
+                { start: '08:15', end: '09:10', subject: 'EPS', room: 'Gymnase', color: 'orange', teacher: 'GONIN A.', week: 'both' },
+                { start: '09:10', end: '10:05', subject: 'Mathématiques', room: 'Salle 200', color: 'blue', teacher: 'CALVIER T.', week: 'both' },
+                { start: '10:20', end: '11:15', subject: 'Histoire-Géo', room: 'Salle 102', color: 'amber', teacher: 'QUARESIMIN L.', week: 'both' },
+                { start: '11:15', end: '12:10', subject: 'Physique-Chimie', room: 'Salle 215', color: 'emerald', teacher: 'THIEBDIA S.', week: 'A' },
+                { start: '11:15', end: '12:10', subject: 'Vie de Classe', room: 'Salle 106', color: 'slate', teacher: 'MAURIN C.', week: 'B' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true, week: 'both' },
+                { start: '13:52', end: '14:47', subject: 'SVT', room: 'Salle 214', color: 'emerald', teacher: 'BRUN A.', week: 'both' },
+                { start: '14:47', end: '15:42', subject: 'Français', room: 'Salle 106', color: 'rose', teacher: 'MAURIN C.', week: 'both' },
             ],
             5: [ // Vendredi
-                { start: '08:15', end: '10:05', subject: 'EPS (2h)', room: 'Stade', color: 'orange' },
-                { start: '10:20', end: '11:15', subject: 'Histoire-Géo', room: 'Salle 112', color: 'amber' },
-                { start: '11:15', end: '12:10', subject: 'Mathématiques', room: 'Salle 201', color: 'blue' },
-                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true },
-                { start: '13:40', end: '14:35', subject: 'Technologie', room: 'Salle 03', color: 'slate' },
-                { start: '14:35', end: '15:30', subject: 'Français', room: 'Salle 105', color: 'rose' },
+                { start: '08:15', end: '09:10', subject: 'Anglais', room: 'Salle 107', color: 'purple', teacher: 'BOISSET A.', week: 'both' },
+                { start: '09:10', end: '10:05', subject: 'Mathématiques', room: 'Salle 200', color: 'blue', teacher: 'CALVIER T.', week: 'both' },
+                { start: '10:20', end: '11:15', subject: 'Physique-Chimie', room: 'Salle 215', color: 'emerald', teacher: 'THIEBDIA S.', week: 'A' },
+                { start: '10:20', end: '11:15', subject: 'Vie de Classe', room: 'Salle 106', color: 'slate', teacher: 'MAURIN C.', week: 'B' },
+                { start: '11:15', end: '12:10', subject: 'Éducation Musicale', room: 'Musique', color: 'indigo', teacher: 'VERDIER J.', week: 'both' },
+                { start: '12:10', end: '13:40', subject: 'Repas (Cantine)', room: 'Réfectoire', color: 'slate', break: true, week: 'both' },
+                { start: '13:52', end: '14:47', subject: 'Français', room: 'Salle 106', color: 'rose', teacher: 'MAURIN C.', week: 'both' },
             ]
         };
 
@@ -394,7 +429,8 @@
             selectedPlanningDay: null,
             simulatedDay: null,
             simulatedTime: null,
-            realDate: new Date()
+            realDate: new Date(),
+            weekMode: 'auto', // 'auto', 'forceA', 'forceB'
         };
 
         // INIT
@@ -460,6 +496,67 @@
         function timeToMins(timeStr) {
             const [h, m] = timeStr.split(':').map(Number);
             return h * 60 + m;
+        }
+
+        // Fonction pour calculer si on est en semaine A ou B
+        function getCurrentWeek() {
+            const now = STATE.realDate;
+            const referenceDate = new Date(WEEK_A_REFERENCE);
+            
+            // Calculer le nombre de semaines écoulées depuis la date de référence
+            const diffTime = now - referenceDate;
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            const diffWeeks = Math.floor(diffDays / 7);
+            
+            // Alterner entre semaine A (pair) et semaine B (impair)
+            return diffWeeks % 2 === 0 ? 'A' : 'B';
+        }
+
+        // Fonction pour calculer la semaine d'un jour spécifique
+        function getWeekForDay(dayOfWeek) {
+            const currentDay = getCurrentDay();
+            
+            // Si on est le weekend (samedi=6, dimanche=0) et qu'on regarde un jour de semaine
+            if ((currentDay === 0 || currentDay === 6) && dayOfWeek >= 1 && dayOfWeek <= 5) {
+                // Calculer la date du jour demandé de la semaine suivante
+                const targetDate = new Date(STATE.realDate);
+                let daysToAdd;
+                
+                if (currentDay === 0) { // Dimanche
+                    daysToAdd = dayOfWeek; // Lundi=1, Mardi=2, etc.
+                } else { // Samedi
+                    daysToAdd = dayOfWeek + 2; // +2 pour passer dimanche et arriver au jour
+                }
+                
+                targetDate.setDate(targetDate.getDate() + daysToAdd);
+                
+                // Calculer la semaine de cette date
+                const referenceDate = new Date(WEEK_A_REFERENCE);
+                const diffTime = targetDate - referenceDate;
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                const diffWeeks = Math.floor(diffDays / 7);
+                
+                return diffWeeks % 2 === 0 ? 'A' : 'B';
+            }
+            
+            // Sinon, retourner la semaine actuelle
+            return getCurrentWeek();
+        }
+
+        // Fonction pour obtenir la semaine à afficher selon le mode
+        function getDisplayedWeek() {
+            // Si mode manuel, retourner la semaine forcée
+            if (STATE.weekMode === 'forceA') return 'A';
+            if (STATE.weekMode === 'forceB') return 'B';
+            
+            // Mode auto : calculer selon le contexte
+            if (STATE.activeTab === 'planning' && STATE.selectedPlanningDay) {
+                // Calculer la semaine du jour sélectionné
+                return getWeekForDay(STATE.selectedPlanningDay);
+            }
+            
+            // Par défaut : semaine actuelle
+            return getCurrentWeek();
         }
 
         function getNextWeekday(day) {
@@ -614,6 +711,9 @@
             document.getElementById('simTimeDisplay').innerText = getCurrentTime();
             document.getElementById('simTimeDisplay').classList.toggle('text-amber-400', STATE.simulatedTime !== null);
 
+            // Mettre à jour l'indicateur de semaine A/B
+            updateWeekBadge();
+
             if (STATE.activeTab === 'home') {
                 updateHomeTab();
             } else if (STATE.activeTab === 'bus') {
@@ -622,6 +722,58 @@
                 updatePlanningTab();
             }
         }
+
+        // Mettre à jour le badge de semaine
+        function updateWeekBadge() {
+            const displayedWeek = getDisplayedWeek();
+            const badge = document.getElementById('weekIndicator');
+            const label = document.getElementById('weekLabel');
+            const icon = document.getElementById('weekModeIcon');
+            
+            // Mettre à jour le texte
+            label.innerText = `Semaine ${displayedWeek}`;
+            
+            // Mettre à jour l'icône selon le mode
+            if (STATE.weekMode === 'auto') {
+                icon.innerText = '🔄';
+            } else {
+                icon.innerText = '📌';
+            }
+            
+            // Mettre à jour les couleurs selon la semaine
+            if (displayedWeek === 'A') {
+                badge.className = 'flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-hawk-500/20 text-hawk-400 border border-hawk-500/30 uppercase tracking-wider cursor-pointer hover:bg-hawk-500/30 transition';
+            } else {
+                badge.className = 'flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 uppercase tracking-wider cursor-pointer hover:bg-purple-500/30 transition';
+            }
+            
+            // Mettre à jour les checkmarks du menu
+            document.getElementById('autoCheck').innerText = STATE.weekMode === 'auto' ? '✓' : '';
+            document.getElementById('forceACheck').innerText = STATE.weekMode === 'forceA' ? '✓' : '';
+            document.getElementById('forceBCheck').innerText = STATE.weekMode === 'forceB' ? '✓' : '';
+        }
+
+        // Toggle du menu de semaine
+        function toggleWeekMenu() {
+            const menu = document.getElementById('weekMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Définir le mode de semaine
+        function setWeekMode(mode) {
+            STATE.weekMode = mode;
+            toggleWeekMenu(); // Fermer le menu
+            updateUI();
+        }
+
+        // Fermer le menu si on clique ailleurs
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('weekMenu');
+            const badge = document.getElementById('weekIndicator');
+            if (menu && badge && !menu.contains(event.target) && !badge.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
 
         function updateHomeTab() {
             // Update bus preview
@@ -652,10 +804,13 @@
                 busPreview.innerHTML = `🌙 Plus de bus aujourd'hui`;
             }
 
-            // Update planning preview
+            // Update planning preview - filtrer selon la semaine A/B
+            const displayedWeek = getDisplayedWeek();
             const schedule = PLANNING[currentDay] || [];
+            const filteredSchedule = schedule.filter(cls => cls.week === 'both' || cls.week === displayedWeek);
+            
             let nextClass = null;
-            for (let cls of schedule) {
+            for (let cls of filteredSchedule) {
                 if (timeToMins(cls.start) > currentMins && !cls.break) {
                     nextClass = cls;
                     break;
@@ -847,6 +1002,7 @@
         function updatePlanningTab() {
             const day = getPlanningDisplayDay();
             const currentMins = timeToMins(getCurrentTime());
+            const displayedWeek = getDisplayedWeek();
             
             document.querySelectorAll('.day-btn').forEach(btn => {
                 btn.classList.remove('bg-hawk-600', 'text-white', 'border-hawk-500');
@@ -861,15 +1017,18 @@
             document.getElementById('planningDayLabel').innerText = DAYS_NAME[day];
 
             const schedule = PLANNING[day] || [];
+            // Filtrer les cours selon la semaine A/B
+            const filteredSchedule = schedule.filter(cls => cls.week === 'both' || cls.week === displayedWeek);
+            
             const container = document.getElementById('scheduleContainer');
             container.innerHTML = '';
 
-            if (schedule.length === 0) {
+            if (filteredSchedule.length === 0) {
                 container.innerHTML = `<p class="text-sm text-slate-500 text-center py-10">Pas de cours ce jour.</p>`;
                 return;
             }
 
-            schedule.forEach((cls) => {
+            filteredSchedule.forEach((cls) => {
                 const startMins = timeToMins(cls.start);
                 const endMins = timeToMins(cls.end);
                 
@@ -899,6 +1058,9 @@
                     cardClass += ' current-class-glow bg-slate-800/80';
                 }
 
+                // Afficher le professeur si disponible
+                const teacherInfo = cls.teacher ? `<span class="text-[10px] text-slate-500 ml-1">${cls.teacher}</span>` : '';
+
                 div.innerHTML = `
                     <div class="absolute left-0 top-3 w-10 text-right pr-2">
                         <span class="block text-xs font-bold ${isCurrent ? 'text-hawk-400' : 'text-slate-300'}">${cls.start}</span>
@@ -908,11 +1070,14 @@
                     <div class="absolute left-[39px] top-4 w-2 h-2 rounded-full border-2 ${dotClass} z-10 transition-transform"></div>
                     
                     <div class="${cardClass}">
-                        <div class="flex justify-between items-start">
-                            <h4 class="text-sm font-bold ${cls.break ? 'text-slate-400' : classColor}">${cls.subject}</h4>
+                        <div class="flex justify-between items-start mb-1">
+                            <div class="flex-1">
+                                <h4 class="text-sm font-bold ${cls.break ? 'text-slate-400' : classColor}">${cls.subject}</h4>
+                                ${teacherInfo}
+                            </div>
                             ${isCurrent ? '<span class="text-[9px] uppercase tracking-wider font-bold bg-hawk-500/20 text-hawk-400 px-1.5 py-0.5 rounded">En cours</span>' : ''}
                         </div>
-                        <div class="flex items-center gap-1 mt-1">
+                        <div class="flex items-center gap-1">
                             <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             <span class="text-xs text-slate-400 font-medium">${cls.room}</span>
                         </div>
