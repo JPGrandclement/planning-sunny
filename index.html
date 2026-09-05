@@ -85,11 +85,16 @@
         <div class="max-w-md mx-auto flex items-center justify-between">
             <div class="flex-1">
                 <h1 class="text-lg font-extrabold text-white leading-tight tracking-tight">Mon Assistant</h1>
-                <div class="flex items-center gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
                     <p id="currentDateDisplay" class="text-xs font-medium text-slate-400 capitalize"></p>
                     
-                    <!-- Week Badge with Dropdown -->
-                    <div class="relative">
+                    <!-- Current Week Badge -->
+                    <span id="currentWeekBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-300 border border-slate-600/30 uppercase tracking-wider">
+                        Sem. A
+                    </span>
+                    
+                    <!-- Displayed Week Badge with Dropdown -->
+                    <div class="relative" id="displayedWeekContainer">
                         <button onclick="toggleWeekMenu()" id="weekIndicator" class="flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-hawk-500/20 text-hawk-400 border border-hawk-500/30 uppercase tracking-wider cursor-pointer hover:bg-hawk-500/30 transition">
                             <span id="weekModeIcon">🔄</span>
                             <span id="weekLabel">Semaine A</span>
@@ -586,7 +591,14 @@
 
         function getPlanningDisplayDay() {
             if (STATE.selectedPlanningDay) return STATE.selectedPlanningDay;
-            return getCurrentDay();
+            
+            const currentDay = getCurrentDay();
+            // Si on est le weekend (samedi=6 ou dimanche=0), afficher le lundi par défaut
+            if (currentDay === 0 || currentDay === 6) {
+                return 1; // Lundi
+            }
+            
+            return currentDay;
         }
 
         // UI ACTIONS
@@ -719,26 +731,50 @@
 
         // Mettre à jour le badge de semaine
         function updateWeekBadge() {
+            const currentWeek = getCurrentWeek();
             const displayedWeek = getDisplayedWeek();
             const badge = document.getElementById('weekIndicator');
             const label = document.getElementById('weekLabel');
             const icon = document.getElementById('weekModeIcon');
+            const currentWeekBadge = document.getElementById('currentWeekBadge');
+            const displayedWeekContainer = document.getElementById('displayedWeekContainer');
             
-            // Mettre à jour le texte
-            label.innerText = `Semaine ${displayedWeek}`;
-            
-            // Mettre à jour l'icône selon le mode
-            if (STATE.weekMode === 'auto') {
-                icon.innerText = '🔄';
+            // Mettre à jour le badge de la semaine actuelle
+            currentWeekBadge.innerText = `Sem. ${currentWeek}`;
+            if (currentWeek === 'A') {
+                currentWeekBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-hawk-500/20 text-hawk-400 border border-hawk-500/30 uppercase tracking-wider';
             } else {
-                icon.innerText = '📌';
+                currentWeekBadge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 uppercase tracking-wider';
             }
             
-            // Mettre à jour les couleurs selon la semaine
-            if (displayedWeek === 'A') {
-                badge.className = 'flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-hawk-500/20 text-hawk-400 border border-hawk-500/30 uppercase tracking-wider cursor-pointer hover:bg-hawk-500/30 transition';
+            // Afficher ou masquer le badge de semaine affichée selon le contexte
+            const shouldShowDisplayedWeek = STATE.activeTab === 'planning' || STATE.weekMode !== 'auto' || displayedWeek !== currentWeek;
+            
+            if (shouldShowDisplayedWeek) {
+                displayedWeekContainer.classList.remove('hidden');
+                
+                // Mettre à jour le texte
+                if (STATE.activeTab === 'planning' && STATE.selectedPlanningDay && STATE.weekMode === 'auto') {
+                    label.innerText = `${DAYS_NAME[STATE.selectedPlanningDay]} Sem. ${displayedWeek}`;
+                } else {
+                    label.innerText = `Semaine ${displayedWeek}`;
+                }
+                
+                // Mettre à jour l'icône selon le mode
+                if (STATE.weekMode === 'auto') {
+                    icon.innerText = '🔄';
+                } else {
+                    icon.innerText = '📌';
+                }
+                
+                // Mettre à jour les couleurs selon la semaine
+                if (displayedWeek === 'A') {
+                    badge.className = 'flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-hawk-500/20 text-hawk-400 border border-hawk-500/30 uppercase tracking-wider cursor-pointer hover:bg-hawk-500/30 transition';
+                } else {
+                    badge.className = 'flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 uppercase tracking-wider cursor-pointer hover:bg-purple-500/30 transition';
+                }
             } else {
-                badge.className = 'flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 border border-purple-500/30 uppercase tracking-wider cursor-pointer hover:bg-purple-500/30 transition';
+                displayedWeekContainer.classList.add('hidden');
             }
             
             // Mettre à jour les checkmarks du menu
