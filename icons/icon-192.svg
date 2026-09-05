@@ -1,0 +1,35 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Fond dégradé -->
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Fond arrondi -->
+  <rect width="192" height="192" rx="42" fill="url(#grad)"/>
+  
+  <!-- Icône Bus -->
+  <g transform="translate(48, 40)">
+    <rect x="8" y="20" width="80" height="60" rx="8" fill="white" opacity="0.95"/>
+    <rect x="16" y="28" width="28" height="24" rx="4" fill="#020617"/>
+    <rect x="52" y="28" width="28" height="24" rx="4" fill="#020617"/>
+    <circle cx="24" cy="76" r="6" fill="#020617"/>
+    <circle cx="72" cy="76" r="6" fill="#020617"/>
+    <rect x="20" y="8" width="56" height="16" rx="8" fill="white" opacity="0.95"/>
+  </g>
+  
+  <!-- Icône Calendrier -->
+  <g transform="translate(48, 100)">
+    <rect x="8" y="8" width="80" height="72" rx="8" fill="white" opacity="0.95"/>
+    <rect x="8" y="8" width="80" height="20" rx="8" fill="#020617"/>
+    <line x1="28" y1="8" x2="28" y2="0" stroke="white" stroke-width="4" stroke-linecap="round"/>
+    <line x1="68" y1="8" x2="68" y2="0" stroke="white" stroke-width="4" stroke-linecap="round"/>
+    <rect x="16" y="36" width="16" height="12" rx="2" fill="#10b981"/>
+    <rect x="40" y="36" width="16" height="12" rx="2" fill="#020617" opacity="0.2"/>
+    <rect x="64" y="36" width="16" height="12" rx="2" fill="#020617" opacity="0.2"/>
+    <rect x="16" y="56" width="16" height="12" rx="2" fill="#020617" opacity="0.2"/>
+    <rect x="40" y="56" width="16" height="12" rx="2" fill="#020617" opacity="0.2"/>
+  </g>
+</svg>

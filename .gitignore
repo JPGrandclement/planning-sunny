@@ -1,0 +1,49 @@
+# Fichiers macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# Files that might appear in the root of a volume
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+
+# Directories potentially created on remote AFP share
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.atrec
+
+# Scripts de génération (optionnel, à garder si vous voulez les partager)
+# generate_icons.py
+# create_placeholder_icons.py
+
+# Fichiers de développement
+*.log
+*.tmp
+*~
+
+# Environnements Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Fichiers de backup
+*.bak
+*.backup

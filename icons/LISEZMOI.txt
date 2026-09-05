@@ -1,0 +1,29 @@
+📱 GÉNÉRATION DES ICÔNES PWA
+================================
+
+Pour générer les icônes de l'application :
+
+MÉTHODE 1 - Générateur HTML (Recommandé) :
+------------------------------------------
+1. Ouvrir le fichier icons/generate_icon.html dans votre navigateur
+2. Cliquer sur "Télécharger icon-192.png" et "Télécharger icon-512.png"
+3. Placer les fichiers téléchargés dans ce dossier icons/
+
+MÉTHODE 2 - Utiliser un service en ligne :
+------------------------------------------
+1. Ouvrir icons/icon-192.svg dans un navigateur
+2. Utiliser https://cloudconvert.com/svg-to-png
+3. Convertir en 192x192px et 512x512px
+4. Sauvegarder comme icon-192.png et icon-512.png
+
+MÉTHODE 3 - Créer vos propres icônes :
+--------------------------------------
+Vous pouvez créer vos propres icônes avec n'importe quel logiciel de design.
+Formats requis :
+- icon-192.png : 192x192 pixels
+- icon-512.png : 512x512 pixels
+
+Thème suggéré : Fond vert (#10b981) avec icônes de bus et calendrier
+
+Note : Des icônes placeholder sont déjà en place pour que l'app fonctionne.
+Vous pouvez les remplacer à tout moment.
